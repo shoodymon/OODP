@@ -4,13 +4,14 @@
 std::mutex console_mutex;
 
 void multiplyVectorElements(const std::vector<int>& vec) {
-    int result = 1;
+    int sum = 0;
     for (int num : vec) {
-        result *= num;
+        if (num < 0)
+            sum += num;
     }
 
     std::lock_guard<std::mutex> lock(console_mutex);
-    std::cout << "Задание 1: Результат умножения элементов вектора = " << result << std::endl;
+    std::cout << "Задание 1: Сумма отрицательных элементов вектора = " << sum << std::endl;
 }
 
 void printIteratorAndThreadId(int iterator) {

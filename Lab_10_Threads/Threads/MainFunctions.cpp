@@ -2,7 +2,7 @@
 #include "TaskFunctions.hpp"
 
 void performFirstTask() {
-    std::vector<int> vec1 = { 2, 3, 4, 5 };
+    std::vector<int> vec1 = { -1, 2, 3, -4, 5 };
     std::thread thread1(multiplyVectorElements, std::ref(vec1));
     thread1.join();
 }
