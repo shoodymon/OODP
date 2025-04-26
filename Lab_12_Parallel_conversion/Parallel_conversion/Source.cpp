@@ -1,30 +1,30 @@
-#include <iostream>
+п»ї#include <iostream>
 #include <vector>
 #include <thread>
 #include <functional>
 #include <algorithm>
 #include <future>
 
-// Параллельная реализация алгоритма transform
+// РџР°СЂР°Р»Р»РµР»СЊРЅР°СЏ СЂРµР°Р»РёР·Р°С†РёСЏ Р°Р»РіРѕСЂРёС‚РјР° transform
 template<typename InputIt, typename OutputIt, typename UnaryOp>
 void parallel_transform(InputIt first, InputIt last, OutputIt d_first, UnaryOp op) {
-    // Определение количества доступных аппаратных потоков
+    // РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕР»РёС‡РµСЃС‚РІР° РґРѕСЃС‚СѓРїРЅС‹С… Р°РїРїР°СЂР°С‚РЅС‹С… РїРѕС‚РѕРєРѕРІ
     const auto num_threads = std::thread::hardware_concurrency();
-    // Если у нас только 1 поток или очень маленький диапазон, используем последовательную обработку
+    // Р•СЃР»Рё Сѓ РЅР°СЃ С‚РѕР»СЊРєРѕ 1 РїРѕС‚РѕРє РёР»Рё РѕС‡РµРЅСЊ РјР°Р»РµРЅСЊРєРёР№ РґРёР°РїР°Р·РѕРЅ, РёСЃРїРѕР»СЊР·СѓРµРј РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅСѓСЋ РѕР±СЂР°Р±РѕС‚РєСѓ
     auto dist = std::distance(first, last);
     if (num_threads <= 1 || dist < 1000) {
         std::transform(first, last, d_first, op);
         return;
     }
 
-    // Определяем размер блока для каждого потока
+    // РћРїСЂРµРґРµР»СЏРµРј СЂР°Р·РјРµСЂ Р±Р»РѕРєР° РґР»СЏ РєР°Р¶РґРѕРіРѕ РїРѕС‚РѕРєР°
     const auto block_size = dist / num_threads;
 
-    // Вектор для хранения потоков
+    // Р’РµРєС‚РѕСЂ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РїРѕС‚РѕРєРѕРІ
     std::vector<std::future<void>> futures;
     futures.reserve(num_threads);
 
-    // Создание и запуск потоков
+    // РЎРѕР·РґР°РЅРёРµ Рё Р·Р°РїСѓСЃРє РїРѕС‚РѕРєРѕРІ
     for (unsigned int i = 0; i < num_threads - 1; ++i) {
         auto block_start = first;
         std::advance(block_start, i * block_size);
@@ -35,7 +35,7 @@ void parallel_transform(InputIt first, InputIt last, OutputIt d_first, UnaryOp o
         auto output_start = d_first;
         std::advance(output_start, i * block_size);
 
-        // Запускаем задачу асинхронно
+        // Р—Р°РїСѓСЃРєР°РµРј Р·Р°РґР°С‡Сѓ Р°СЃРёРЅС…СЂРѕРЅРЅРѕ
         futures.push_back(
             std::async(std::launch::async,
                 [=]() {
@@ -45,49 +45,49 @@ void parallel_transform(InputIt first, InputIt last, OutputIt d_first, UnaryOp o
         );
     }
 
-    // Последний блок обрабатываем отдельно, чтобы учесть остаток элементов
+    // РџРѕСЃР»РµРґРЅРёР№ Р±Р»РѕРє РѕР±СЂР°Р±Р°С‚С‹РІР°РµРј РѕС‚РґРµР»СЊРЅРѕ, С‡С‚РѕР±С‹ СѓС‡РµСЃС‚СЊ РѕСЃС‚Р°С‚РѕРє СЌР»РµРјРµРЅС‚РѕРІ
     auto last_block_start = first;
     std::advance(last_block_start, (num_threads - 1) * block_size);
 
     auto last_output_start = d_first;
     std::advance(last_output_start, (num_threads - 1) * block_size);
 
-    // Последний блок обрабатываем в основном потоке
+    // РџРѕСЃР»РµРґРЅРёР№ Р±Р»РѕРє РѕР±СЂР°Р±Р°С‚С‹РІР°РµРј РІ РѕСЃРЅРѕРІРЅРѕРј РїРѕС‚РѕРєРµ
     std::transform(last_block_start, last, last_output_start, op);
 
-    // Ждем завершения всех потоков
+    // Р–РґРµРј Р·Р°РІРµСЂС€РµРЅРёСЏ РІСЃРµС… РїРѕС‚РѕРєРѕРІ
     for (auto& future : futures) {
         future.wait();
     }
 }
 
-// Функция для тестирования
+// Р¤СѓРЅРєС†РёСЏ РґР»СЏ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ
 int main() {
     setlocale(0, "");
-    // Исходный вектор
+    // РСЃС…РѕРґРЅС‹Р№ РІРµРєС‚РѕСЂ
     std::vector<int> source(10000);
     for (int i = 0; i < 10000; ++i) {
         source[i] = i;
     }
 
-    // Вектор для результатов
+    // Р’РµРєС‚РѕСЂ РґР»СЏ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ
     std::vector<int> result(source.size());
 
-    // Определяем операцию возведения в квадрат
+    // РћРїСЂРµРґРµР»СЏРµРј РѕРїРµСЂР°С†РёСЋ РІРѕР·РІРµРґРµРЅРёСЏ РІ РєРІР°РґСЂР°С‚
     auto square = [](int x) { return x * x; };
 
-    // Применяем параллельный transform
+    // РџСЂРёРјРµРЅСЏРµРј РїР°СЂР°Р»Р»РµР»СЊРЅС‹Р№ transform
     parallel_transform(source.begin(), source.end(), result.begin(), square);
 
-    // Проверка результатов
-    std::cout << "Проверка первых 10 элементов результата:" << std::endl;
+    // РџСЂРѕРІРµСЂРєР° СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ
+    std::cout << "РџСЂРѕРІРµСЂРєР° РїРµСЂРІС‹С… 10 СЌР»РµРјРµРЅС‚РѕРІ СЂРµР·СѓР»СЊС‚Р°С‚Р°:" << std::endl;
     for (int i = 0; i < 10; ++i) {
-        std::cout << source[i] << " в квадрате = " << result[i] << std::endl;
+        std::cout << source[i] << " РІ РєРІР°РґСЂР°С‚Рµ = " << result[i] << std::endl;
     }
 
-    std::cout << "Проверка последних 10 элементов результата:" << std::endl;
+    std::cout << "РџСЂРѕРІРµСЂРєР° РїРѕСЃР»РµРґРЅРёС… 10 СЌР»РµРјРµРЅС‚РѕРІ СЂРµР·СѓР»СЊС‚Р°С‚Р°:" << std::endl;
     for (int i = source.size() - 10; i < source.size(); ++i) {
-        std::cout << source[i] << " в квадрате = " << result[i] << std::endl;
+        std::cout << source[i] << " РІ РєРІР°РґСЂР°С‚Рµ = " << result[i] << std::endl;
     }
 
     return 0;
