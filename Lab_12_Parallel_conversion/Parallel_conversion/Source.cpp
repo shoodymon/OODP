@@ -5,90 +5,62 @@
 #include <algorithm>
 #include <future>
 
-// Параллельная реализация алгоритма transform
-template<typename InputIt, typename OutputIt, typename UnaryOp>
-void parallel_transform(InputIt first, InputIt last, OutputIt d_first, UnaryOp op) {
-    // Определение количества доступных аппаратных потоков
-    const auto num_threads = std::thread::hardware_concurrency();
-    // Если у нас только 1 поток или очень маленький диапазон, используем последовательную обработку
-    auto dist = std::distance(first, last);
-    if (num_threads <= 1 || dist < 1000) {
-        std::transform(first, last, d_first, op);
-        return;
+template <typename RandomAccessIterator, typename F>
+void parallelTransform(RandomAccessIterator begin, RandomAccessIterator end, F&& func) {
+    auto size = std::distance(begin, end);
+
+    if (size <= 10000) {
+        std::transform(begin, end, begin, std::forward<F>(func)); // - единичная функция для диапазона
     }
+    else {
+        int thread_count = 5;
+        std::vector<std::thread> threads;
+        auto block_size = size / thread_count;
 
-    // Определяем размер блока для каждого потока
-    const auto block_size = dist / num_threads;
+        for (int i = 0; i < thread_count; ++i)
+        {
+            auto block_begin = begin + i * block_size;
+            auto block_end = (i == thread_count - 1) ? end : block_begin + block_size;
 
-    // Вектор для хранения потоков
-    std::vector<std::future<void>> futures;
-    futures.reserve(num_threads);
+            threads.emplace_back([block_begin, block_end, i, &func]() {
+                std::cout << "Поток " << i + 1 << " [" << std::distance(block_begin, block_end) << "] начал работу\n";
+                std::transform(block_begin, block_end, block_begin, std::forward<F>(func));
+                std::cout << "Поток " << i + 1 << " завершил работу\n";
+                });
+        }
 
-    // Создание и запуск потоков
-    for (unsigned int i = 0; i < num_threads - 1; ++i) {
-        auto block_start = first;
-        std::advance(block_start, i * block_size);
-
-        auto block_end = block_start;
-        std::advance(block_end, block_size);
-
-        auto output_start = d_first;
-        std::advance(output_start, i * block_size);
-
-        // Запускаем задачу асинхронно
-        futures.push_back(
-            std::async(std::launch::async,
-                [=]() {
-                    std::transform(block_start, block_end, output_start, op);
-                }
-            )
-        );
-    }
-
-    // Последний блок обрабатываем отдельно, чтобы учесть остаток элементов
-    auto last_block_start = first;
-    std::advance(last_block_start, (num_threads - 1) * block_size);
-
-    auto last_output_start = d_first;
-    std::advance(last_output_start, (num_threads - 1) * block_size);
-
-    // Последний блок обрабатываем в основном потоке
-    std::transform(last_block_start, last, last_output_start, op);
-
-    // Ждем завершения всех потоков
-    for (auto& future : futures) {
-        future.wait();
+        for (auto& t : threads) {
+            t.join();
+        }
     }
 }
 
-// Функция для тестирования
-int main() {
+
+int square(int x) {
+    return x * x;
+}
+
+int main()
+{
     setlocale(0, "");
-    // Исходный вектор
-    std::vector<int> source(10000);
-    for (int i = 0; i < 10000; ++i) {
-        source[i] = i;
+
+    std::vector<int> temp(20000);
+    for (size_t i = 0; i < temp.size(); i++)
+    {
+        temp.at(i) = i + 1;
     }
 
-    // Вектор для результатов
-    std::vector<int> result(source.size());
-
-    // Определяем операцию возведения в квадрат
-    auto square = [](int x) { return x * x; };
-
-    // Применяем параллельный transform
-    parallel_transform(source.begin(), source.end(), result.begin(), square);
-
-    // Проверка результатов
-    std::cout << "Проверка первых 10 элементов результата:" << std::endl;
-    for (int i = 0; i < 10; ++i) {
-        std::cout << source[i] << " в квадрате = " << result[i] << std::endl;
+    for (size_t i = 0; i < 10; i++)
+    {
+        std::cout << temp.at(i) << " ";
     }
+    std::cout << std::endl;
 
-    std::cout << "Проверка последних 10 элементов результата:" << std::endl;
-    for (int i = source.size() - 10; i < source.size(); ++i) {
-        std::cout << source[i] << " в квадрате = " << result[i] << std::endl;
+    parallelTransform(temp.begin(), temp.end(), square);
+
+    std::cout << std::endl;
+    for (size_t i = 0; i < 10; i++)
+    {
+        std::cout << temp.at(i) << " ";
     }
-
-    return 0;
 }
