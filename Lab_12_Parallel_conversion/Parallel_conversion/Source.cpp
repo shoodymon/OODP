@@ -35,7 +35,6 @@ void parallelTransform(RandomAccessIterator begin, RandomAccessIterator end, F&&
     }
 }
 
-
 int square(int x) {
     return x * x;
 }
